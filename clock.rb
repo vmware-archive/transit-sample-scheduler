@@ -55,7 +55,7 @@ def get_predictions_for_routes_and_stops(routes_and_stops)
   routes_and_stops.map do |route_and_stop|
     route, stop = route_and_stop.split("_")
 
-    route_url = "#{PREDICTIONS_URL}/#{route}/#{stop}"
+    route_url = "#{PREDICTIONS_URL}/stop/#{stop}/route/#{route}"
     response = HTTParty.get route_url
 
     puts "Response for #{route}: #{response.code} - #{response.body}"
