@@ -1,0 +1,9 @@
+applications:
+- name: ttc-poller
+  memory: 256M
+  instances: 1
+  host: ttc-poller
+  domain: one.pepsi.cf-app.com
+  timeout: 120
+  no-route: true
+  command: bundle exec clockwork clock.rb
