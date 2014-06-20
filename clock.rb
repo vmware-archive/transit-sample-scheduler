@@ -22,6 +22,12 @@ module Clockwork
     predictions = get_predictions_for_routes(routes)
 
     puts "Found predictions: #{predictions}"
+
+    matches = tags & predictions
+
+    puts "Found matches: #{matches}"
+
+    send_notifications_for_matches(matches)
   end
 
   every(1.minute, 'updates')
@@ -64,5 +70,26 @@ def get_predictions_for_routes(routes)
       end
     end
   end.flatten.compact.uniq
+end
+
+def send_notifications_for_matches(matches)
+  notifications_url = "#{PUSH_URL}/v1/push"
+
+  matches.each do |match|
+    time, stop = match.split('_')
+
+    response = HTTParty.post notifications_url,
+      body: {
+        message: {
+          body: "Bus in #{time} minutes at Stop ##{stop}"
+        },
+        target: {
+          tags: [ match ]
+        }
+      }.to_json,
+      basic_auth: { username: PUSH_USERNAME, password: PUSH_PASSWORD }
+
+    puts "Sent notification to #{match}: #{response.code} - #{response.body}"
+  end
 end
 
