@@ -15,11 +15,11 @@ module Clockwork
 
     puts "Found tags: #{tags}"
 
-    routes = get_routes_from_tags(tags)
+    routes_and_stops = get_routes_and_stops_from_tags(tags)
 
-    puts "Found routes: #{routes}"
+    puts "Found routes and stops: #{routes_and_stops}"
 
-    predictions = get_predictions_for_routes(routes)
+    predictions = get_predictions_for_routes_and_stops(routes_and_stops)
 
     puts "Found predictions: #{predictions}"
 
@@ -43,17 +43,19 @@ def get_tags()
   JSON.parse(response.body)["tags"]
 end
 
-def get_routes_from_tags(tags)
+def get_routes_and_stops_from_tags(tags)
   tags.map do |tag|
-    delta, route = tag.split("_")
+    delta, route, stop = tag.split("_")
 
-    route
+    "#{route}_#{stop}"
   end.compact.uniq
 end
 
-def get_predictions_for_routes(routes)
-  routes.map do |route|
-    route_url = "#{PREDICTIONS_URL}/#{route}"
+def get_predictions_for_routes_and_stops(routes_and_stops)
+  routes_and_stops.map do |route_and_stop|
+    route, stop = route_and_stop.split("_")
+
+    route_url = "#{PREDICTIONS_URL}/#{route}/#{stop}"
     response = HTTParty.get route_url
 
     puts "Response for #{route}: #{response.code} - #{response.body}"
@@ -66,7 +68,7 @@ def get_predictions_for_routes(routes)
       direction["predictions"].map do |prediction|
         minutes = prediction["minutes"]
 
-        "#{minutes}_#{route}" unless minutes.nil?
+        "#{minutes}_#{route}_#{stop}" unless minutes.nil?
       end
     end
   end.flatten.compact.uniq
@@ -76,18 +78,19 @@ def send_notifications_for_matches(matches)
   notifications_url = "#{PUSH_URL}/v1/push"
 
   matches.each do |match|
-    time, stop = match.split('_')
+    time, route, stop = match.split('_')
 
     response = HTTParty.post notifications_url,
       body: {
         message: {
-          body: "Bus in #{time} minutes at Stop ##{stop}"
+          body: "Bus #{route} coming in #{time} minutes to stop ##{stop}"
         },
         target: {
           tags: [ match ]
         }
       }.to_json,
-      basic_auth: { username: PUSH_USERNAME, password: PUSH_PASSWORD }
+      basic_auth: { username: PUSH_USERNAME, password: PUSH_PASSWORD },
+      verify: false
 
     puts "Sent notification to #{match}: #{response.code} - #{response.body}"
   end
