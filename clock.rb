@@ -5,7 +5,7 @@ PUSH_URL = "https://push-notifications.sherry.wine.cf-app.com:443"
 PUSH_USERNAME = "6c0cb5a6-1244-4ed0-9618-d2957f85a401"
 PUSH_PASSWORD = "e910e5ee-7ef9-4d81-8a33-8f70f7aac808"
 
-PREDICTIONS_URL = "http://nextbus.main.vchs.cfms-apps.com/ttc/predictions"
+PREDICTIONS_URL = "http://nextbus.one.pepsi.cf-app.com/ttc/predictions"
 
 module Clockwork
   handler do |job, time|
