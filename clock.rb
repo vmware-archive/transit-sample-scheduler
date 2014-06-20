@@ -89,6 +89,9 @@ def send_notifications_for_matches(matches)
           tags: [ match ]
         }
       }.to_json,
+      headers: {
+        "Content-type" => "application/json"
+      },
       basic_auth: { username: PUSH_USERNAME, password: PUSH_PASSWORD },
       verify: false
 
