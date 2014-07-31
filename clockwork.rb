@@ -1,36 +1,38 @@
 require 'clockwork'
 require 'httparty'
+require 'dotenv'
 
-PUSH_URL = "https://push-notifications.sherry.wine.cf-app.com:443"
-PUSH_USERNAME = "6c0cb5a6-1244-4ed0-9618-d2957f85a401"
-PUSH_PASSWORD = "e910e5ee-7ef9-4d81-8a33-8f70f7aac808"
+Dotenv.load
 
-PREDICTIONS_URL = "http://nextbus.one.pepsi.cf-app.com/ttc/predictions"
+PUSH_URL = ENV["PUSH_URL"]
+PUSH_USERNAME = ENV["PUSH_USERNAME"]
+PUSH_PASSWORD = ENV["PUSH_PASSWORD"]
+
+PREDICTIONS_URL = ENV["PREDICTIONS_URL"]
+
+POLL_INTERVAL = ENV["POLL_INTERVAL"].to_i
+POLL_WINDOW = ENV["POLL_WINDOW"].to_i
 
 module Clockwork
   handler do |job, time|
     puts "Running #{job} at #{time}"
 
     tags = get_tags()
-
     puts "Found tags: #{tags}"
 
     routes_and_stops = get_routes_and_stops_from_tags(tags)
-
     puts "Found routes and stops: #{routes_and_stops}"
 
     predictions = get_predictions_for_routes_and_stops(routes_and_stops)
-
     puts "Found predictions: #{predictions}"
 
-    matches = tags & predictions
-
+    matches = get_matches(tags, predictions)
     puts "Found matches: #{matches}"
 
     send_notifications_for_matches(matches)
   end
 
-  every(1.minute, 'updates')
+  every(POLL_INTERVAL.minute, 'updates')
 end
 
 def get_tags()
@@ -40,7 +42,15 @@ def get_tags()
     basic_auth: { username: PUSH_USERNAME, password: PUSH_PASSWORD },
     verify: false
 
-  JSON.parse(response.body)["tags"]
+  JSON.parse(response.body)["tags"].select do |tag|
+    time, route, stop = tag.split("_")
+
+    [
+      (Time.strptime(time, "%H%M") rescue false),
+      !route.nil?,
+      !stop.nil?
+    ].all?
+  end
 end
 
 def get_routes_and_stops_from_tags(tags)
@@ -66,27 +76,54 @@ def get_predictions_for_routes_and_stops(routes_and_stops)
 
     response["directions"].map do |direction|
       direction["predictions"].map do |prediction|
-        minutes = prediction["minutes"]
+        time = Time.at(prediction["time"].to_f/1000).strftime("%H%M")
 
-        "#{minutes}_#{route}_#{stop}" unless minutes.nil?
+        "#{time}_#{route}_#{stop}" unless time.nil?
       end
     end
   end.flatten.compact.uniq
 end
 
+def get_matches(tags, predictions)
+  {}.tap do |matches|
+    tags.each do |tag|
+      next_prediction = predictions.detect do |prediction|
+        matches? tag, prediction
+      end
+
+      matches[tag] = next_prediction if next_prediction
+    end
+  end
+end
+
+def matches? tag, prediction
+  tag_time, tag_route, tag_stop = tag.split("_")
+  prediction_time, prediction_route, prediction_stop = prediction.split("_")
+
+  delta = (Time.strptime(tag_time, "%H%M") - Time.strptime(prediction_time, "%H%M")).to_i/60
+
+  return false unless prediction_route == tag_route
+  return false unless prediction_stop == tag_stop
+  return false unless delta >= 0 && delta <= 15
+
+  true
+end
+
 def send_notifications_for_matches(matches)
   notifications_url = "#{PUSH_URL}/v1/push"
 
-  matches.each do |match|
-    time, route, stop = match.split('_')
+  matches.each do |tag, prediction|
+    time, route, stop = prediction.split('_')
+    time_string = Time.strptime(time, "%H%M").strftime("%-l:%M %p")
+    message = "Bus #{route} coming at #{time_string} to stop ##{stop}"
 
     response = HTTParty.post notifications_url,
       body: {
         message: {
-          body: "Bus #{route} coming in #{time} minutes to stop ##{stop}"
+          body: message
         },
         target: {
-          tags: [ match ]
+          tags: [ tag ]
         }
       }.to_json,
       headers: {
@@ -95,7 +132,7 @@ def send_notifications_for_matches(matches)
       basic_auth: { username: PUSH_USERNAME, password: PUSH_PASSWORD },
       verify: false
 
-    puts "Sent notification to #{match}: #{response.code} - #{response.body}"
+    puts "Sent notification to #{tag}: #{message} - #{response.code} - #{response.body}"
   end
 end
 

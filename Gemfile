@@ -1,4 +1,6 @@
-source :rubygems
+source 'http://rubygems.org'
 
 gem 'clockwork'
 gem 'httparty'
+gem 'dotenv'
+
