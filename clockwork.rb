@@ -66,7 +66,14 @@ def get_predictions_for_routes_and_stops(routes_and_stops)
     route, stop = route_and_stop.split("_")
 
     route_url = "#{PREDICTIONS_URL}/stop/#{stop}/route/#{route}"
-    response = HTTParty.get route_url
+
+    begin
+      response = HTTParty.get route_url
+    rescue Exception => e
+      puts "Skipping prediction for route:#{route} and stop:#{stop}"
+      puts e.message
+      next
+    end
 
     puts "Response for #{route}: #{response.code} - #{response.body}"
     if (response.code != 200)
@@ -100,6 +107,7 @@ def matches? tag, prediction
   tag_time, tag_route, tag_stop = tag.split("_")
   prediction_time, prediction_route, prediction_stop = prediction.split("_")
 
+# TODO: Handle about 23:59 - 00:15 transition
   delta = (Time.strptime(tag_time, "%H%M") - Time.strptime(prediction_time, "%H%M")).to_i/60
 
   return false unless prediction_route == tag_route
@@ -114,8 +122,9 @@ def send_notifications_for_matches(matches)
 
   matches.each do |tag, prediction|
     time, route, stop = prediction.split('_')
-    time_string = Time.strptime(time, "%H%M").strftime("%-l:%M %p")
-    message = "Bus #{route} coming at #{time_string} to stop ##{stop}"
+    time_string = (Time.strptime(time, "%H%M") + Time.now.utc_offset - Time.now).to_i / 60
+    message = "Bus #{route} coming in #{time_string} minutes to stop ##{stop}"
+    puts message
 
     response = HTTParty.post notifications_url,
       body: {
