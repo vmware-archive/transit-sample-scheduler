@@ -1,6 +1,7 @@
 require 'clockwork'
 require 'httparty'
 require 'dotenv'
+require 'time_difference'
 
 Dotenv.load
 
@@ -68,7 +69,7 @@ def get_predictions_for_routes_and_stops(routes_and_stops)
     route_url = "#{PREDICTIONS_URL}/stop/#{stop}/route/#{route}"
     response = HTTParty.get route_url
 
-    puts "Response for #{route}: #{response.code} - #{response.body}"
+    puts "Response for #{route} and #{stop}: #{response.code} - #{response.body}"
     if (response.code != 200)
       puts "Skipping #{route}"
       next
@@ -102,6 +103,10 @@ def matches? tag, prediction
 
   delta = (Time.strptime(tag_time, "%H%M") - Time.strptime(prediction_time, "%H%M")).to_i/60
 
+  if tag_route == "504" && prediction_route == "504"
+    puts "Delta for #{tag} and #{prediction}: #{delta}"
+  end
+
   return false unless prediction_route == tag_route
   return false unless prediction_stop == tag_stop
   return false unless delta >= 0 && delta <= 15
@@ -114,8 +119,10 @@ def send_notifications_for_matches(matches)
 
   matches.each do |tag, prediction|
     time, route, stop = prediction.split('_')
-    time_string = Time.strptime(time, "%H%M").strftime("%-l:%M %p")
-    message = "Bus #{route} coming at #{time_string} to stop ##{stop}"
+    #time_string = Time.strptime(time, "%H%M").strftime("%-l:%M %p")
+    time_string = TimeDifference.between(Time.now.utc, Time.strptime(time, "%H%M")).in_minutes.to_i
+    #message = "Bus #{route} coming at #{time_string} to stop ##{stop}"
+    message = "Bus #{route} coming in #{time_string} minutes to stop ##{stop}"
 
     response = HTTParty.post notifications_url,
       body: {

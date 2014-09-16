@@ -24,6 +24,8 @@ GEM
     multi_xml (0.5.5)
     thread_safe (0.2.0)
       atomic (>= 1.1.7, < 2)
+    time_difference (0.3.2)
+      activesupport
     tzinfo (0.3.38)
 
 PLATFORMS
@@ -33,3 +35,4 @@ DEPENDENCIES
   clockwork
   dotenv
   httparty
+  time_difference
