@@ -1,8 +1,8 @@
 applications:
-- name: ttc-scheduler
+- name: transit-scheduler-app
   memory: 256M
   instances: 1
-  host: ttc-scheduler
+  host: transit-scheduler-app
   timeout: 120
   no-route: true
   command: bundle exec clockwork clockwork.rb
