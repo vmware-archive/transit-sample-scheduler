@@ -4,5 +4,5 @@ gem 'clockwork'
 gem 'httparty'
 gem 'dotenv'
 gem 'time_difference'
-gem 'active_support'
+gem 'activesupport'
 

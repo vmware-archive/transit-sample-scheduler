@@ -32,6 +32,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  activesupport
   clockwork
   dotenv
   httparty
