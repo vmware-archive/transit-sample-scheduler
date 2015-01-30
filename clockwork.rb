@@ -140,13 +140,11 @@ def send_notifications_for_matches(matches)
 
     puts "Time: #{time}, Route: #{route}, Stop: #{stop}"
 
-    # time_string = (Time.strptime(time, "%H%M") + Time.now.utc_offset - Time.now).to_i / 60
-
     # For clarity, these now have the same timezone and uses the "time_difference" gem
     time_difference_in_minutes = TimeDifference.between(
       Time.strptime("#{time}", "%H%M").in_time_zone(DEFAULT_TIME_ZONE),
       Time.now.in_time_zone(DEFAULT_TIME_ZONE)
-      ).in_minutes
+    ).in_minutes.round
 
     message = "Bus #{route} coming in #{time_difference_in_minutes} minutes to stop ##{stop}"
 
