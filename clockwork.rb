@@ -96,6 +96,10 @@ def get_predictions_for_routes_and_stops(routes_and_stops)
       next
     end
 
+    if response["directions"].nil?
+      next
+    end
+
     response["directions"].map do |direction|
       direction["predictions"].map do |prediction|
         time = Time.at(prediction["time"].to_f/1000).strftime("%H%M")
