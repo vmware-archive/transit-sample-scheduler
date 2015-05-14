@@ -158,11 +158,16 @@ def send_notifications_for_matches(matches)
     end
 
     puts "Sending push with message: #{message}"
-
+    
     response = HTTParty.post notifications_url,
       body: {
         message: {
-          body: message
+          body: message,
+          custom: {
+            ios: {
+              "content-available" => true
+            },
+          },
         },
         target: {
           tags: [ tag ]
@@ -223,7 +228,12 @@ def send_notifications_for_alerts(alerts)
     response = HTTParty.post notifications_url,
       body: {
         message: {
-          body: message
+          body: message,
+          custom: {
+            ios: {
+              "content-available" => true
+            },
+          },
         },
         target: {
           tags: [ "service_alerts" ]
